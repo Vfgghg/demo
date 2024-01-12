@@ -84,36 +84,21 @@ namespace EncryptionDecryptionUsingSymmetricKey
 
 
 ************
-using System;
-
-namespace EncryptionDecryptionUsingSymmetricKey
+public static string GenerateHmac(string key, string data)
 {
-    class Program
+    byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+    byte[] dataBytes = Encoding.UTF8.GetBytes(data);
+
+    using (HMACSHA256 hmac = new HMACSHA256(keyBytes))
     {
-        static void Main(string[] args)
-        {
-            var key = AesOperation.GenerateRandomKey();
-
-            Console.WriteLine("Please enter a string for encryption:");
-            var str = Console.ReadLine();
-
-            // Encrypt the entered string using the key
-            var encryptedString = AesOperation.EncryptString(key, str);
-            Console.WriteLine($"Encrypted string = {encryptedString}");
-
-            // Generate an HMAC signature for the encrypted data
-            var signature = AesOperation.GenerateHmac(key, encryptedString);
-            Console.WriteLine($"Generated Signature = {signature}");
-
-            // Decrypt the encrypted string
-            var decryptedString = AesOperation.DecryptString(key, encryptedString);
-
-            // Verify the HMAC signature for the decrypted data
-            var isSignatureValid = AesOperation.VerifyHmac(key, decryptedString, signature);
-            Console.WriteLine($"Decrypted string = {decryptedString}");
-            Console.WriteLine($"Is Signature Valid = {isSignatureValid}");
-
-            Console.ReadKey();
-        }
+        byte[] hashBytes = hmac.ComputeHash(dataBytes);
+        return Convert.ToBase64String(hashBytes);
     }
 }
+
+public static bool VerifyHmac(string key, string data, string signature)
+{
+    string generatedSignature = GenerateHmac(key, data);
+    return signature.Equals(generatedSignature);
+}
+
