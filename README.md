@@ -83,22 +83,54 @@ namespace EncryptionDecryptionUsingSymmetricKey
 
 
 
-************
-public static string GenerateHmac(string key, string data)
-{
-    byte[] keyBytes = Encoding.UTF8.GetBytes(key);
-    byte[] dataBytes = Encoding.UTF8.GetBytes(data);
+****
 
-    using (HMACSHA256 hmac = new HMACSHA256(keyBytes))
-    {
-        byte[] hashBytes = hmac.ComputeHash(dataBytes);
-        return Convert.ToBase64String(hashBytes);
+
+
+
+
+ public static string GenerateHash(string key, string data)
+        {
+            byte[] keyBytes = Convert.FromBase64String(key);
+            byte[] dataBytes = Convert.FromBase64String(data);
+            
+ public static string GenerateHash(string key, string data)
+        {
+            byte[] keyBytes = Convert.FromBase64String(key);
+            byte[] dataBytes = Convert.FromBase64String(data);
+
+
+            using (HMACSHA256 hmac = new HMACSHA256(keyBytes))
+            {
+                byte[] hashBytes = hmac.ComputeHash(dataBytes);
+                return Convert.ToBase64String(hashBytes);
+            }
+        }
+
+        public static string GenerateHmac(string key, string data)
+        {
+            byte[] keyBytes = Convert.FromBase64String(key);
+            byte[] dataBytes = Convert.FromBase64String(data);
+
+            using (HMACSHA256 hmac = new HMACSHA256(keyBytes))
+            {
+                byte[] hashBytes = hmac.ComputeHash(dataBytes);
+                return Convert.ToBase64String(hashBytes);
+            }
+        }
+
+        public static bool VerifyHmac(string key, string data, string signature)
+        {
+            byte[] keyBytes = Convert.FromBase64String(key);
+            byte[] dataBytes = Convert.FromBase64String(data);
+            byte[] signatureBytes = Convert.FromBase64String(signature);
+
+            using (HMACSHA256 hmac = new HMACSHA256(keyBytes))
+            {
+                byte[] generatedSignatureBytes = hmac.ComputeHash(dataBytes);
+                return signatureBytes.SequenceEqual(generatedSignatureBytes);
+            }
+        }
     }
-}
-
-public static bool VerifyHmac(string key, string data, string signature)
-{
-    string generatedSignature = GenerateHmac(key, data);
-    return signature.Equals(generatedSignature);
 }
 
