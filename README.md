@@ -7,6 +7,30 @@ using System.Text;
 
 namespace EncryptionDecryptionUsingSymmetricKey
 {
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            // Generate a session key for the current session
+            var sessionKey = AesOperation.GenerateRandomKey();
+
+            Console.WriteLine("Please enter a string for encryption:");
+            var str = Console.ReadLine();
+
+            // Encrypt the entered string using the session key
+            var encryptedString = AesOperation.EncryptString(sessionKey, str);
+            Console.WriteLine($"Encrypted string = {encryptedString}");
+
+            // Example of calling GenerateHash with raw byte arrays
+            byte[] keyBytes = Convert.FromBase64String(sessionKey);
+            byte[] dataBytes = Encoding.UTF8.GetBytes(str);
+            string hash = AesOperation.GenerateHash(keyBytes, dataBytes);
+            Console.WriteLine($"Generated Hash = {hash}");
+
+            Console.ReadKey();
+        }
+    }
+
     public class AesOperation
     {
         public static string GenerateRandomKey()
@@ -65,27 +89,7 @@ namespace EncryptionDecryptionUsingSymmetricKey
             }
         }
 
-        public static string GenerateHash(string key, string data)
-        {
-            byte[] keyBytes = Convert.FromBase64String(key);
-            byte[] dataBytes = Encoding.UTF8.GetBytes(data);
-
-            using (HMACSHA256 hmac = new HMACSHA256(keyBytes))
-            {
-                byte[] hashBytes = hmac.ComputeHash(dataBytes);
-                return Convert.ToBase64String(hashBytes);
-            }
-        }
-    }
-}
-
-
-
-
-
-****
-
- public static string GenerateHash(byte[] key, byte[] data)
+        public static string GenerateHash(byte[] key, byte[] data)
         {
             using (HMACSHA256 hmac = new HMACSHA256(key))
             {
@@ -94,27 +98,5 @@ namespace EncryptionDecryptionUsingSymmetricKey
             }
         }
     }
-
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            var key = AesOperation.GenerateRandomKey();
-
-            Console.WriteLine("Please enter a string for encryption:");
-            var str = Console.ReadLine();
-
-            // Encrypt the entered string using the key
-            var encryptedString = AesOperation.EncryptString(key, str);
-            Console.WriteLine($"Encrypted string = {encryptedString}");
-
-            // Example of calling GenerateHash with raw byte arrays
-            byte[] keyBytes = Convert.FromBase64String(key);
-            byte[] dataBytes = Encoding.UTF8.GetBytes(str);
-            string hash = AesOperation.GenerateHash(keyBytes, dataBytes);
-            Console.WriteLine($"Generated Hash = {hash}");
-
-            Console.ReadKey();
-        }
-    }
 }
+
