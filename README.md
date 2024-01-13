@@ -1,58 +1,50 @@
-# demo
-
-using System;
-using System.IO;
-using System.Security.Cryptography;
-using System.Text;
-
-namespace EncryptionDecryptionUsingSymmetricKey
+public static string DecryptString(string sessionId, string cipherText)
 {
-    class Program
+    // Retrieve the session key directly, assuming the session ID exists
+    string sessionKey = SessionKeys[sessionId];
+
+    try
     {
-        static void Main(string[] args)
+        using (Aes aes = Aes.Create())
         {
-            // Generate a session key for the current session
-            var sessionKey = AesOperation.GenerateRandomKey();
+            aes.Key = Convert.FromBase64String(sessionKey);
+            aes.GenerateIV();
 
-            Console.WriteLine("Please enter a string for encryption:");
-            var str = Console.ReadLine();
+            ICryptoTransform decryptor = aes.CreateDecryptor();
 
-            // Encrypt the entered string using the session key
-            var encryptedString = AesOperation.EncryptString(sessionKey, str);
-            Console.WriteLine($"Encrypted string = {encryptedString}");
-
-            // Example of calling GenerateHash with raw byte arrays
-            byte[] keyBytes = Convert.FromBase64String(sessionKey);
-            byte[] dataBytes = Encoding.UTF8.GetBytes(str);
-            string hash = AesOperation.GenerateHash(keyBytes, dataBytes);
-            Console.WriteLine($"Generated Hash = {hash}");
-
-            Console.ReadKey();
-        }
-    }
-
-    public class AesOperation
-    {
-        public static string GenerateRandomKey()
-        {
-            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
+            using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(cipherText)))
             {
-                byte[] keyBytes = new byte[32]; // 256 bits
-                rng.GetBytes(keyBytes);
-                return Convert.ToBase64String(keyBytes);
+                using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
+                {
+                    using (StreamReader streamReader = new StreamReader(cryptoStream))
+                    {
+                        return streamReader.ReadToEnd();
+                    }
+                }
             }
         }
+    }
+    catch (Exception ex)
+    {
+        return $"Error during decryption: {ex.Message}\nStack Trace: {ex.StackTrace}";
+    }
+}
 
-        public static string EncryptString(string key, string plainText)
-        {
-            using (Aes aes = Aes.Create())
-            {
-                aes.Key = Convert.FromBase64String(key);
-                aes.GenerateIV();
 
-                ICryptoTransform encryptor = aes.CreateEncryptor();
-
-                using (MemoryStream memoryStream = new MemoryStream())
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    using (MemoryStream memoryStream = new MemoryStream())
                 {
                     using (CryptoStream cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
                     {
