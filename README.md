@@ -139,3 +139,7 @@ namespace EncryptionDecryptionUsingSymmetricKey
         }
     }
 }
+
+******************
+System.Collections.Generic.KeyNotFoundException: 'The given key '6360d110-8239-44a8-bb07-616a59a72565' was not present in the dictionary.'
+
