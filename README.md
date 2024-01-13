@@ -287,3 +287,44 @@ namespace EncryptionDecryptionUsingSymmetricKey
 }
 
 
+***********************
+
+public static string DecryptString(string sessionId, string cipherText)
+{
+    try
+    {
+        Console.WriteLine($"DecryptString: Session ID: {sessionId}, Cipher Text: {cipherText}");
+
+        if (SessionKeys.TryGetValue(sessionId, out string sessionKey))
+        {
+            Console.WriteLine($"DecryptString: Session Key: {sessionKey}");
+
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = Convert.FromBase64String(sessionKey);
+                aes.GenerateIV();
+
+                ICryptoTransform decryptor = aes.CreateDecryptor();
+
+                using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(cipherText)))
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader streamReader = new StreamReader(cryptoStream))
+                        {
+                            return streamReader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+
+        // If the session is not found or expired, you may want to throw an exception or handle it appropriately.
+        throw new Exception("Session not found or expired");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error during decryption: {ex.Message}\nStack Trace: {ex.StackTrace}");
+        return null; // Handle the error gracefully in your application
+    }
+}
