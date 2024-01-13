@@ -143,3 +143,46 @@ namespace EncryptionDecryptionUsingSymmetricKey
 ******************
 System.Collections.Generic.KeyNotFoundException: 'The given key '6360d110-8239-44a8-bb07-616a59a72565' was not present in the dictionary.'
 
+public static string DecryptString(string sessionId, string cipherText)
+{
+    if (SessionKeys.ContainsKey(sessionId))
+    {
+        try
+        {
+            string sessionKey = SessionKeys[sessionId];
+
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = Convert.FromBase64String(sessionKey);
+                aes.GenerateIV();
+
+                ICryptoTransform decryptor = aes.CreateDecryptor();
+
+                byte[] cipherBytes = Convert.FromBase64String(cipherText);
+
+                using (MemoryStream memoryStream = new MemoryStream(cipherBytes))
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader streamReader = new StreamReader(cryptoStream))
+                        {
+                            return streamReader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during decryption: {ex.Message}\nStack Trace: {ex.StackTrace}");
+        }
+    }
+    else
+    {
+        Console.WriteLine($"Session not found: {sessionId}");
+    }
+
+    return null; // Session not found or decryption error
+}
+
+
