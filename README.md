@@ -126,9 +126,16 @@ namespace first
             byte[] dataBytes = Encoding.UTF8.GetBytes(str);
             string hash = AesOperation.GenerateHash(keyBytes, dataBytes);
             Console.WriteLine($"Generated Hash = {hash}");
-
-            var decryptedString = AesOperation.DecryptString(key, encryptedString);
-            Console.WriteLine($"decrypted string = {decryptedString}");
+  // Decrypt the string using the session key
+            try
+            {
+                var decryptedString = AesOperation.DecryptString(sessionId, encryptedString);
+                Console.WriteLine($"Decrypted string = {decryptedString}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during decryption: {ex.Message}");
+            }
 
             Console.ReadKey();
         }
