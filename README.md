@@ -327,3 +327,73 @@ namespace first
         }
     }
 }
+******************
+public static string EncryptString(string sessionId, string plainText)
+{
+    if (SessionKeys.TryGetValue(sessionId, out string sessionKey))
+    {
+        using (Aes aes = Aes.Create())
+        {
+            aes.Key = Convert.FromBase64String(sessionKey);
+            aes.GenerateIV();
+
+            ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                using (CryptoStream cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
+                {
+                    using (StreamWriter streamWriter = new StreamWriter(cryptoStream))
+                    {
+                        streamWriter.Write(plainText);
+                    }
+                }
+
+                // Concatenate IV to the ciphertext for later use in decryption
+                byte[] ivWithCiphertext = aes.IV.Concat(memoryStream.ToArray()).ToArray();
+                return Convert.ToBase64String(ivWithCiphertext);
+            }
+        }
+    }
+
+    return null; // Session not found
+}
+
+public static string DecryptString(string sessionId, string cipherText)
+{
+    if (SessionKeys.TryGetValue(sessionId, out string sessionKey))
+    {
+        try
+        {
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = Convert.FromBase64String(sessionKey);
+
+                // Extract IV from the beginning of the ciphertext
+                byte[] iv = new byte[16];
+                Buffer.BlockCopy(Convert.FromBase64String(cipherText), 0, iv, 0, iv.Length);
+                aes.IV = iv;
+
+                ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+
+                using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(cipherText)))
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader streamReader = new StreamReader(cryptoStream))
+                        {
+                            return streamReader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            return $"Error during decryption: {ex.Message}";
+        }
+    }
+
+    return null; // Session not found or decryption error
+}
+
