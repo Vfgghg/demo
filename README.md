@@ -1,391 +1,220 @@
 using System;
-
-namespace EncryptionDecryptionUsingSymmetricKey
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            // Generate a session key for the current session
-            var sessionKey = AesOperation.GenerateRandomKey();
-
-            Console.WriteLine("Please enter a string for encryption:");
-            var str = Console.ReadLine();
-
-            // Encrypt the entered string using the session key
-            var encryptedString = AesOperation.EncryptString(sessionKey, str);
-            Console.WriteLine($"Encrypted string = {encryptedString}");
-
-            // Example of calling GenerateHash with raw byte arrays
-            byte[] keyBytes = Convert.FromBase64String(sessionKey);
-            byte[] dataBytes = Encoding.UTF8.GetBytes(str);
-            string hash = AesOperation.GenerateHash(keyBytes, dataBytes);
-            Console.WriteLine($"Generated Hash = {hash}");
-
-            Console.ReadKey();
-        }
-    }
-
-    public class AesOperation
-    {
-        public static string GenerateRandomKey()
-        {
-            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
-            {
-                byte[] keyBytes = new byte[32]; // 256 bits
-                rng.GetBytes(keyBytes);
-                return Convert.ToBase64String(keyBytes);
-            }
-        }
-
-        public static string EncryptString(string key, string plainText)
-        {
-            using (Aes aes = Aes.Create())
-            {
-                aes.Key = Convert.FromBase64String(key);
-                aes.GenerateIV();
-
-                ICryptoTransform encryptor = aes.CreateEncryptor();
-
-                using (MemoryStream memoryStream = new MemoryStream())
-                {
-                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
-                    {
-                        using (StreamWriter streamWriter = new StreamWriter(cryptoStream))
-                        {
-                            streamWriter.Write(plainText);
-                        }
-                    }
-
-                    return Convert.ToBase64String(memoryStream.ToArray());
-                }
-            }
-        }
-
-        public static string DecryptString(string key, string cipherText)
-        {
-            using (Aes aes = Aes.Create())
-            {
-                aes.Key = Convert.FromBase64String(key);
-                aes.GenerateIV();
-
-                ICryptoTransform decryptor = aes.CreateDecryptor();
-
-                using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(cipherText)))
-                {
-                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
-                    {
-                        using (StreamReader streamReader = new StreamReader(cryptoStream))
-                        {
-                            return streamReader.ReadToEnd();
-                        }
-                    }
-                }
-            }
-        }
-
-        public static string GenerateHash(byte[] key, byte[] data)
-        {
-            using (HMACSHA256 hmac = new HMACSHA256(key))
-            {
-                byte[] hashBytes = hmac.ComputeHash(data);
-                return Convert.ToBase64String(hashBytes);
-            }
-        }
-    }
-}
-
-************
-using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
-
-namespace EncryptionDecryptionUsingSymmetricKey
-{
-    public class AesOperation
-    {
-        private static readonly Dictionary<string, string> SessionKeys = new Dictionary<string, string>();
-
-        public static string StartSession()
-        {
-            string sessionId = Guid.NewGuid().ToString();
-            string sessionKey = GenerateRandomKey();
-            SessionKeys.Add(sessionId, sessionKey);
-            return sessionId;
-        }
-
-        public static void EndSession(string sessionId)
-        {
-            SessionKeys.Remove(sessionId);
-        }
-
-        public static string GenerateRandomKey()
-        {
-            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
-            {
-                byte[] keyBytes = new byte[32]; // 256 bits
-                rng.GetBytes(keyBytes);
-                return Convert.ToBase64String(keyBytes);
-            }
-        }
-
-        public static string EncryptString(string sessionId, string plainText)
-        {
-            if (SessionKeys.TryGetValue(sessionId, out string sessionKey))
-            {
-                using (Aes aes = Aes.Create())
-                {
-                    aes.Key = Convert.FromBase64String(sessionKey);
-                    aes.GenerateIV();
-
-                    ICryptoTransform encryptor = aes.CreateEncryptor();
-
-                    using (MemoryStream memoryStream = new MemoryStream())
-                    {
-                        using (CryptoStream cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
-                        {
-                            using (StreamWriter streamWriter = new StreamWriter(cryptoStream))
-                            {
-                                streamWriter.Write(plainText);
-                            }
-                        }
-
-                        return Convert.ToBase64String(memoryStream.ToArray());
-                    }
-                }
-            }
-
-            return null; // Session not found
-        }
-
-        public static string DecryptString(string sessionId, string cipherText)
-        {
-            if (SessionKeys.TryGetValue(sessionId, out string sessionKey))
-            {
-                try
-                {
-                    using (Aes aes = Aes.Create())
-                    {
-                        aes.Key = Convert.FromBase64String(sessionKey);
-                        aes.GenerateIV();
-
-                        ICryptoTransform decryptor = aes.CreateDecryptor();
-
-                        using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(cipherText)))
-                        {
-                            using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
-                            {
-                                using (StreamReader streamReader = new StreamReader(cryptoStream))
-                                {
-                                    return streamReader.ReadToEnd();
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error during decryption: {ex.Message}");
-                }
-            }
-
-            return null; // Session not found or decryption error
-        }
-
-        public static string GenerateHash(byte[] key, byte[] data)
-        {
-            using (HMACSHA256 hmac = new HMACSHA256(key))
-            {
-                byte[] hashBytes = hmac.ComputeHash(data);
-                return Convert.ToBase64String(hashBytes);
-            }
-        }
-    }
-
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            // Start a new session and get the session identifier
-            var sessionId = AesOperation.StartSession();
-
-            Console.WriteLine("Please enter a string for encryption:");
-            var str = Console.ReadLine();
-
-            // Encrypt the entered string using the session key
-            var encryptedString = AesOperation.EncryptString(sessionId, str);
-            Console.WriteLine($"Encrypted string = {encryptedString}");
-
-            // Example of calling GenerateHash with raw byte arrays
-            byte[] keyBytes = Convert.FromBase64String(AesOperation.SessionKeys[sessionId]);
-            byte[] dataBytes = Encoding.UTF8.GetBytes(str);
-            string hash = AesOperation.GenerateHash(keyBytes, dataBytes);
-            Console.WriteLine($"Generated Hash = {hash}");
-
-            // Decrypt the string using the session key
-            var decryptedString = AesOperation.DecryptString(sessionId, encryptedString);
-
-            // Display the decrypted string
-            Console.WriteLine($"Decrypted string = {decryptedString}");
-
-            // End the session
-            AesOperation.EndSession(sessionId);
-
-            Console.ReadKey();
-        }
-    }
-}
-
-******************
-System.Collections.Generic.KeyNotFoundException: 'The given key '6360d110-8239-44a8-bb07-616a59a72565' was not present in the dictionary.'
-
-public static string DecryptString(string sessionId, string cipherText)
-{
-    if (SessionKeys.ContainsKey(sessionId))
-    {
-        try
-        {
-            string sessionKey = SessionKeys[sessionId];
-
-            using (Aes aes = Aes.Create())
-            {
-                aes.Key = Convert.FromBase64String(sessionKey);
-                aes.GenerateIV();
-
-                ICryptoTransform decryptor = aes.CreateDecryptor();
-
-                byte[] cipherBytes = Convert.FromBase64String(cipherText);
-
-                using (MemoryStream memoryStream = new MemoryStream(cipherBytes))
-                {
-                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
-                    {
-                        using (StreamReader streamReader = new StreamReader(cryptoStream))
-                        {
-                            return streamReader.ReadToEnd();
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error during decryption: {ex.Message}\nStack Trace: {ex.StackTrace}");
-        }
-    }
-    else
-    {
-        Console.WriteLine($"Session not found: {sessionId}");
-    }
-
-    return null; // Session not found or decryption error
-}
-
-***************
-Session not found: 18ebea2d-3b56-46b2-a75a-f2641c761dfb
-************************
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 
-namespace EncryptionDecryptionUsingSymmetricKey
+
+class Program
 {
-    public class AesOperation
+    private static RSAParameters publicKey;
+    private static RSAParameters privateKey;
+    public enum KeySizes
     {
-        private static readonly Dictionary<string, string> SessionKeys = new Dictionary<string, string>();
+        SIZE_512 = 512,
+        SIZE_1024 = 1024,
+        SIZE_2048 = 2048,
+        SIZE_952 = 952,
+        SIZE_1369 = 1369
+    }
 
-        public static string StartSession() => SessionKeys[Guid.NewGuid().ToString()] = GenerateRandomKey();
+    public static string Message; //text to be encrypted
+    public static List<byte[]> Encrypted_Texts_Array = new List<byte[]>(); //store encrypted texts
 
-        public static string EndSession(string sessionId) => SessionKeys.Remove(sessionId, out var sessionKey) ? sessionKey : null;
 
-        public static string GenerateRandomKey()
+    public static void AppendAllBytes(string path, byte[] bytes)
+    {
+        using (var stream = new FileStream(path, FileMode.Append))
         {
-            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
-            {
-                byte[] keyBytes = new byte[32];
-                rng.GetBytes(keyBytes);
-                return Convert.ToBase64String(keyBytes);
-            }
-        }
-
-        public static string EncryptString(string sessionId, string plainText) =>
-            Convert.ToBase64String(EncryptDecryptInternal(sessionId, plainText, true));
-
-        public static string DecryptString(string sessionId, string cipherText) =>
-            Encoding.UTF8.GetString(Convert.FromBase64String(EncryptDecryptInternal(sessionId, cipherText, false)));
-
-        private static byte[] EncryptDecryptInternal(string sessionId, string input, bool encrypt)
-        {
-            var sessionKey = SessionKeys[sessionId];
-
-            using (Aes aes = Aes.Create())
-            {
-                aes.Key = Convert.FromBase64String(sessionKey);
-                aes.GenerateIV();
-
-                ICryptoTransform cryptoTransform = encrypt ? aes.CreateEncryptor() : aes.CreateDecryptor();
-
-                using (MemoryStream memoryStream = new MemoryStream())
-                {
-                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, cryptoTransform, CryptoStreamMode.Write))
-                    using (StreamWriter streamWriter = new StreamWriter(cryptoStream))
-                    {
-                        streamWriter.Write(input);
-                    }
-
-                    return memoryStream.ToArray();
-                }
-            }
-        }
-
-        public static string GenerateHash(byte[] key, byte[] data)
-        {
-            using (HMACSHA256 hmac = new HMACSHA256(key))
-            {
-                byte[] hashBytes = hmac.ComputeHash(data);
-                return Convert.ToBase64String(hashBytes);
-            }
+            stream.Write(bytes, 0, bytes.Length);
         }
     }
 
-    class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
+        Console.WriteLine("Write message to be encrypted:");
+
+        Program.Message = Console.ReadLine();
+
+        StartEncrypto();
+
+        StartDecrypto();
+
+        Console.ReadLine();
+    }
+
+    static void StartEncrypto()
+    {
+
+        //get text size
+        int Text_Size = System.Text.ASCIIEncoding.ASCII.GetByteCount(Program.Message);
+        Console.WriteLine("Text Size: " + Text_Size + " bytes");
+
+        generateKeys();
+
+        //encrypt message in chunks of 250 bytes then store result in file, separated by line breaks
+        File.WriteAllText(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\encrypted.txt", "");
+        int Chunk_Size = 199;
+
+        for (int i = 0; i < Math.Ceiling(Text_Size / (Chunk_Size * 1.0)); i++)
         {
-            var sessionId = AesOperation.StartSession();
+            try
+            {
+                byte[] Encrypted_Text = Encrypt(Encoding.UTF8.GetBytes(Program.Message.Substring(i * Chunk_Size, Chunk_Size)));
 
-            Console.WriteLine($"Started Session ID: {sessionId}");
+                File.AppendAllText(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\encrypted.txt", Convert.ToBase64String(Encrypted_Text) + "\n");
 
-            Console.WriteLine("Please enter a string for encryption:");
-            var str = Console.ReadLine();
+                Program.Encrypted_Texts_Array.Add(Encrypted_Text);
+            }
+            catch (System.Exception)
+            {
+                byte[] Encrypted_Text = Encrypt(Encoding.UTF8.GetBytes(Program.Message.Substring(i * Chunk_Size)));
 
-            var encryptedString = AesOperation.EncryptString(sessionId, str);
-            Console.WriteLine($"Encrypted string = {encryptedString}");
+                File.AppendAllText(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\encrypted.txt", Convert.ToBase64String(Encrypted_Text) + "\n");
 
-            byte[] keyBytes = Convert.FromBase64String(AesOperation.EndSession(sessionId));
-            byte[] dataBytes = Encoding.UTF8.GetBytes(str);
-            string hash = AesOperation.GenerateHash(keyBytes, dataBytes);
-            Console.WriteLine($"Generated Hash = {hash}");
+                Program.Encrypted_Texts_Array.Add(Encrypted_Text);
+            }
+
+        }
+
+        Console.WriteLine("Encrypted data written to file\n");
+    }
+
+
+    static void StartDecrypto()
+    {
+
+        List<byte[]> Decrypted_Texts = new List<byte[]>();
+
+        //read encrypted data from file line by line and decrypt it
+        string line;
+
+        System.IO.StreamReader file = new System.IO.StreamReader(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\encrypted.txt");
+
+        while ((line = file.ReadLine()) != null)
+        {
+            byte[] from_file = Convert.FromBase64String(line);
+            byte[] decrypted = Decrypt(from_file);
+
+            Decrypted_Texts.Add(decrypted);
+        }
+        file.Close();
+
+
+        Console.WriteLine("Encrypted data from file read and decrypted\n");
+
+
+        Console.WriteLine("Original\n\t " + Program.Message + "\n");
+
+        string collect = "";
+        foreach (var item in Program.Encrypted_Texts_Array)
+        {
+            collect += BitConverter.ToString(item).Replace("-", "") + "\n";
+        }
+        Console.WriteLine("Encrypted\n\t" + collect);
+
+        Console.WriteLine("Decrypted\n\t");
+        foreach (var chunk in Decrypted_Texts)
+        {
+            Console.Write(Encoding.UTF8.GetString(chunk));
+        }
+        Console.WriteLine("");
+    }
+
+
+
+    static void generateKeys()
+    {
+        using (var rsa = new RSACryptoServiceProvider(2048))
+        {
+            rsa.PersistKeyInCsp = false; //Don't store the keys in a key container
+            publicKey = rsa.ExportParameters(false);
+            privateKey = rsa.ExportParameters(true);
+
+            //store the keys in file
+            File.WriteAllText(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\pubKey.xml", KeyToString(publicKey));
+            File.WriteAllText(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\priKey.xml", KeyToString(privateKey));
+
+            Console.WriteLine("Keys writen to file\n");
+        }
+    }
+
+    static byte[] Encrypt(byte[] input)
+    {
+        byte[] encrypted;
+        using (var rsa = new RSACryptoServiceProvider(2048))
+        {
+            rsa.PersistKeyInCsp = false;
+
+            //get public key from file
+            rsa.ImportParameters(StringToKey(File.ReadAllText(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\pubKey.xml")));
 
             try
             {
-                Console.WriteLine($"Attempting to decrypt using Session ID: {sessionId}");
-                var decryptedString = AesOperation.DecryptString(sessionId, encryptedString);
-                Console.WriteLine($"Decrypted string = {decryptedString}");
+                encrypted = rsa.Encrypt(input, true);
+                return encrypted;
             }
-            catch (Exception ex)
+            catch (System.Exception e)
             {
-                Console.WriteLine($"Error during decryption: {ex.Message}\nStack Trace: {ex.StackTrace}");
+                System.Console.WriteLine(e);
+                byte[] empty = {};
+                return empty;
             }
 
-            Console.ReadKey();
         }
+        
+    }
+
+    static byte[] Decrypt(byte[] input)
+    {
+        byte[] decrypted;
+        using (var rsa = new RSACryptoServiceProvider(2048))
+        {
+            rsa.PersistKeyInCsp = false;
+
+            //get private key from file
+            rsa.ImportParameters(StringToKey(File.ReadAllText(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\priKey.xml")));
+
+            try
+            {
+                decrypted = rsa.Decrypt(input, true);
+                return decrypted;
+            }
+            catch (System.Exception e)
+            {
+                System.Console.WriteLine(e);
+                byte[] empty = {};
+                return empty;
+            }
+            
+        }
+        
+    }
+
+    //converting the public key into a string representation
+    static string KeyToString(RSAParameters key)
+    {
+        //we need some buffer
+        var sw = new System.IO.StringWriter();
+        //we need a serializer
+        var xs = new System.Xml.Serialization.XmlSerializer(typeof(RSAParameters));
+        //serialize the key into the stream
+        xs.Serialize(sw, key);
+        //get the string from the stream
+
+        return sw.ToString();
+    }
+
+    //converting it back
+    static RSAParameters StringToKey(string stringkey)
+    {
+        //get a stream from the string
+        var sr = new System.IO.StringReader(stringkey);
+        //we need a deserializer
+        var xs = new System.Xml.Serialization.XmlSerializer(typeof(RSAParameters));
+        //get the object back from the stream
+
+        return (RSAParameters)xs.Deserialize(sr);
     }
 }
-
-
-
