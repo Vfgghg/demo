@@ -396,4 +396,42 @@ public static string DecryptString(string sessionId, string cipherText)
 
     return null; // Session not found or decryption error
 }
+******************
+public static string DecryptString(string sessionId, string cipherText)
+{
+    if (SessionKeys.TryGetValue(sessionId, out string sessionKey))
+    {
+        try
+        {
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = Convert.FromBase64String(sessionKey);
+
+                // Extract IV from the beginning of the ciphertext
+                byte[] iv = new byte[16];
+                Buffer.BlockCopy(Convert.FromBase64String(cipherText), 0, iv, 0, iv.Length);
+                aes.IV = iv;
+
+                // Decrypt the ciphertext (excluding the IV)
+                using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(cipherText).Skip(16).ToArray()))
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream(memoryStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
+                    {
+                        using (StreamReader streamReader = new StreamReader(cryptoStream, Encoding.UTF8)) // Specify the encoding
+                        {
+                            return streamReader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during decryption: {ex.Message}");
+        }
+    }
+
+    return null; // Session not found or decryption error
+}
+
 
