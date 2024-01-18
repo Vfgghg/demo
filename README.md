@@ -218,3 +218,112 @@ class Program
         return (RSAParameters)xs.Deserialize(sr);
     }
 }
+*********
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace first 
+{
+    public class AesOperation
+    {
+        internal static readonly Dictionary<string, string> SessionKeys = new Dictionary<string, string>();
+
+        public static string StartSession()
+        {
+            string sessionId = Guid.NewGuid().ToString();
+            string sessionKey = GenerateRandomKey();
+            SessionKeys.Add(sessionId, sessionKey);
+            return sessionId;
+        }
+
+        public static void EndSession(string sessionId)
+        {
+            SessionKeys.Remove(sessionId);
+        }
+
+        public static string GenerateRandomKey()
+        {
+            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
+            {
+                byte[] keyBytes = new byte[32]; // 256 bits
+                rng.GetBytes(keyBytes);
+                return Convert.ToBase64String(keyBytes);
+            }
+        }
+
+        public static string EncryptString(string sessionId, string plainText)
+        {
+            if (SessionKeys.TryGetValue(sessionId, out string sessionKey))
+            {
+                using (Aes aes = Aes.Create())
+                {
+                    aes.Key = Convert.FromBase64String(sessionKey);
+                    aes.GenerateIV();
+
+                    ICryptoTransform encryptor = aes.CreateEncryptor();
+
+                    using (MemoryStream memoryStream = new MemoryStream())
+                    {
+                        using (CryptoStream cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
+                        {
+                            using (StreamWriter streamWriter = new StreamWriter(cryptoStream))
+                            {
+                                streamWriter.Write(plainText);
+                            }
+                        }
+
+                        return Convert.ToBase64String(memoryStream.ToArray());
+                    }
+                }
+            }
+
+            return null; // Session not found
+        }
+
+        public static string DecryptString(string sessionId, string cipherText)
+        {
+            if (SessionKeys.TryGetValue(sessionId, out string sessionKey))
+            {
+                try
+                {
+                    using (Aes aes = Aes.Create())
+                    {
+                        aes.Key = Convert.FromBase64String(sessionKey);
+                        aes.GenerateIV();
+
+                        ICryptoTransform decryptor = aes.CreateDecryptor();
+
+                        using (MemoryStream memoryStream = new MemoryStream(Convert.FromBase64String(cipherText)))
+                        {
+                            using (CryptoStream cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
+                            {
+                                using (StreamReader streamReader = new StreamReader(cryptoStream))
+                                {
+                                    return streamReader.ReadToEnd();
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error during decryption: {ex.Message}");
+                }
+            }
+
+            return null; // Session not found or decryption error
+        }
+
+        public static string GenerateHash(byte[] key, byte[] data)
+        {
+            using (HMACSHA256 hmac = new HMACSHA256(key))
+            {
+                byte[] hashBytes = hmac.ComputeHash(data);
+                return Convert.ToBase64String(hashBytes);
+            }
+        }
+    }
+}
