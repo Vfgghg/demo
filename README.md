@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using PemUtils;
 
 class SecureAsymmetricEncryption
 {
@@ -18,7 +20,8 @@ class SecureAsymmetricEncryption
                 throw new InvalidOperationException("Invalid certificate");
             }
 
-            rsa.ImportSubjectPublicKeyInfo(certificate.RawData, out _);
+            RSAParameters publicKeyParameters = certificate.GetRSAPublicKey().ExportParameters(false);
+            rsa.ImportParameters(publicKeyParameters);
 
             // Encrypt the data
             byte[] data = Encoding.UTF8.GetBytes(plainText);
@@ -39,11 +42,24 @@ class SecureAsymmetricEncryption
                 throw new InvalidOperationException("Invalid certificate");
             }
 
-            rsa.ImportRSAPrivateKey(certificate.GetRSAPrivateKey().ExportRSAPrivateKey(), out _);
+            RSAParameters privateKeyParameters = GetRSAParametersFromPem(certificate.ExportEncryptedPkcs8PrivateKey(), privateKeyPassword);
+            rsa.ImportParameters(privateKeyParameters);
 
             // Decrypt the data
             byte[] decryptedData = rsa.Decrypt(encryptedData, RSAEncryptionPadding.Pkcs1);
             return Encoding.UTF8.GetString(decryptedData);
+        }
+    }
+
+    private static RSAParameters GetRSAParametersFromPem(string pemData, string password)
+    {
+        using (MemoryStream stream = new MemoryStream(Encoding.ASCII.GetBytes(pemData)))
+        {
+            using (TextReader textReader = new StreamReader(stream))
+            {
+                PemObject pemObject = PemReader.ReadPemObject(textReader);
+                return PemUtils.PemReader.DecodeEncryptedPrivateKey(pemObject.Content, password);
+            }
         }
     }
 }
