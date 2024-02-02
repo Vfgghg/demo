@@ -18,8 +18,7 @@ class SecureAsymmetricEncryption
                 throw new InvalidOperationException("Invalid certificate");
             }
 
-            RSAParameters publicKeyParameters = certificate.GetRSAPublicKey().ExportParameters(false);
-            rsa.ImportParameters(publicKeyParameters);
+            rsa.ImportSubjectPublicKeyInfo(certificate.RawData, out _);
 
             // Encrypt the data
             byte[] data = Encoding.UTF8.GetBytes(plainText);
@@ -35,40 +34,16 @@ class SecureAsymmetricEncryption
             X509Certificate2 certificate = new X509Certificate2(privateKeyPath, privateKeyPassword, X509KeyStorageFlags.Exportable);
 
             // Ensure the certificate is valid and has a private key
-            if (certificate.NotAfter < DateTime.Now || certificate.PrivateKey == null)
+            if (certificate.NotAfter < DateTime.Now || certificate.GetRSAPrivateKey() == null)
             {
                 throw new InvalidOperationException("Invalid certificate");
             }
 
-            RSAParameters privateKeyParameters = ((RSA)certificate.PrivateKey).ExportParameters(true);
-            rsa.ImportParameters(privateKeyParameters);
+            rsa.ImportRSAPrivateKey(certificate.GetRSAPrivateKey().ExportRSAPrivateKey(), out _);
 
             // Decrypt the data
             byte[] decryptedData = rsa.Decrypt(encryptedData, RSAEncryptionPadding.Pkcs1);
             return Encoding.UTF8.GetString(decryptedData);
-        }
-    }
-
-    public static string ExportPublicKey(string publicKeyPath)
-    {
-        X509Certificate2 certificate = new X509Certificate2(publicKeyPath);
-        RSAParameters publicKeyParameters = certificate.GetRSAPublicKey().ExportParameters(false);
-        return ExportKey(publicKeyParameters);
-    }
-
-    public static string ExportPrivateKey(string privateKeyPath, string privateKeyPassword)
-    {
-        X509Certificate2 certificate = new X509Certificate2(privateKeyPath, privateKeyPassword, X509KeyStorageFlags.Exportable);
-        RSAParameters privateKeyParameters = ((RSA)certificate.PrivateKey).ExportParameters(true);
-        return ExportKey(privateKeyParameters);
-    }
-
-    private static string ExportKey(RSAParameters keyParameters)
-    {
-        using (RSA rsa = RSA.Create())
-        {
-            rsa.ImportParameters(keyParameters);
-            return Convert.ToBase64String(rsa.ExportRSAPrivateKey());
         }
     }
 }
@@ -92,14 +67,6 @@ class Program
             // Decryption
             string decryptedText = SecureAsymmetricEncryption.Decrypt(privateKeyPath, privateKeyPassword, encryptedData);
             Console.WriteLine($"Decrypted Text: {decryptedText}");
-
-            // Export Public Key
-            string exportedPublicKey = SecureAsymmetricEncryption.ExportPublicKey(publicKeyPath);
-            Console.WriteLine($"Exported Public Key:\n{exportedPublicKey}");
-
-            // Export Private Key
-            string exportedPrivateKey = SecureAsymmetricEncryption.ExportPrivateKey(privateKeyPath, privateKeyPassword);
-            Console.WriteLine($"Exported Private Key:\n{exportedPrivateKey}");
         }
         catch (Exception ex)
         {
