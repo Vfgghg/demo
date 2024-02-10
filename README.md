@@ -1,92 +1,90 @@
+encption::----
 using System;
 using System.IO;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using PemUtils;
 
-class SecureAsymmetricEncryption
+namespace RES_LEARN
 {
-    public static byte[] Encrypt(string publicKeyPath, string plainText)
+    public static class Encryption
     {
-        using (RSA rsa = RSA.Create())
+        public static byte[] Encrypt(byte[] data, string publicKeyFilePath)
         {
-            // Load the public key from the certificate
-            X509Certificate2 certificate = new X509Certificate2(publicKeyPath);
+            X509Certificate2 publicKeyCertificate = new X509Certificate2(publicKeyFilePath);
+            RSAParameters publicKeyParameters = ((RSA)publicKeyCertificate.GetRSAPublicKey()).ExportParameters(false);
 
-            // Ensure the certificate is valid and has a public key
-            if (certificate.NotAfter < DateTime.Now || certificate.PublicKey.Key == null)
+            using (RSA rsa = RSA.Create())
             {
-                throw new InvalidOperationException("Invalid certificate");
-            }
-
-            RSAParameters publicKeyParameters = certificate.GetRSAPublicKey().ExportParameters(false);
-            rsa.ImportParameters(publicKeyParameters);
-
-            // Encrypt the data
-            byte[] data = Encoding.UTF8.GetBytes(plainText);
-            return rsa.Encrypt(data, RSAEncryptionPadding.Pkcs1);
-        }
-    }
-
-    public static string Decrypt(string privateKeyPath, string privateKeyPassword, byte[] encryptedData)
-    {
-        using (RSA rsa = RSA.Create())
-        {
-            // Load the private key from the certificate
-            X509Certificate2 certificate = new X509Certificate2(privateKeyPath, privateKeyPassword, X509KeyStorageFlags.Exportable);
-
-            // Ensure the certificate is valid and has a private key
-            if (certificate.NotAfter < DateTime.Now || certificate.GetRSAPrivateKey() == null)
-            {
-                throw new InvalidOperationException("Invalid certificate");
-            }
-
-            RSAParameters privateKeyParameters = GetRSAParametersFromPem(certificate.ExportEncryptedPkcs8PrivateKey(), privateKeyPassword);
-            rsa.ImportParameters(privateKeyParameters);
-
-            // Decrypt the data
-            byte[] decryptedData = rsa.Decrypt(encryptedData, RSAEncryptionPadding.Pkcs1);
-            return Encoding.UTF8.GetString(decryptedData);
-        }
-    }
-
-    private static RSAParameters GetRSAParametersFromPem(string pemData, string password)
-    {
-        using (MemoryStream stream = new MemoryStream(Encoding.ASCII.GetBytes(pemData)))
-        {
-            using (TextReader textReader = new StreamReader(stream))
-            {
-                PemObject pemObject = PemReader.ReadPemObject(textReader);
-                return PemUtils.PemReader.DecodeEncryptedPrivateKey(pemObject.Content, password);
+                rsa.ImportParameters(publicKeyParameters);
+                return rsa.Encrypt(data, RSAEncryptionPadding.OaepSHA256);
             }
         }
     }
 }
 
-class Program
+
+
+
+decption:::----
+
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace RES_LEARN
 {
-    static void Main()
+    public static class Decryption
     {
-        try
+        public static string Decrypt(byte[] encryptedData, string privateKeyFilePath, string privateKeyPassword)
         {
-            // Example usage
-            string publicKeyPath = @"path_to_public_certificate.cer";
-            string privateKeyPath = @"path_to_private_certificate.pfx";
-            string privateKeyPassword = "password";
-            string plainText = "Hello, world!";
+            X509Certificate2 privateKeyCertificate = new X509Certificate2(privateKeyFilePath, privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            RSAParameters privateKeyParameters = ((RSA)privateKeyCertificate.GetRSAPrivateKey()).ExportParameters(true);
 
-            // Encryption
-            byte[] encryptedData = SecureAsymmetricEncryption.Encrypt(publicKeyPath, plainText);
-            Console.WriteLine($"Encrypted Data: {Convert.ToBase64String(encryptedData)}");
-
-            // Decryption
-            string decryptedText = SecureAsymmetricEncryption.Decrypt(privateKeyPath, privateKeyPassword, encryptedData);
-            Console.WriteLine($"Decrypted Text: {decryptedText}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
+            using (RSA rsa = RSA.Create())
+            {
+                rsa.ImportParameters(privateKeyParameters);
+                byte[] decryptedData = rsa.Decrypt(encryptedData, RSAEncryptionPadding.OaepSHA256);
+                return Encoding.UTF8.GetString(decryptedData);
+            }
         }
     }
 }
+
+
+signature::----
+
+using System;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+
+namespace RES_LEARN
+{
+    public static class Signature
+    {
+        public static byte[] SignData(byte[] data, string privateKeyFilePath, string privateKeyPassword)
+        {
+            X509Certificate2 privateKeyCertificate = new X509Certificate2(privateKeyFilePath, privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
+            using (RSA rsa = (RSA)privateKeyCertificate.GetRSAPrivateKey())
+            {
+                return rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            }
+        }
+
+        public static bool VerifySignature(byte[] data, byte[] signature, string publicKeyFilePath)
+        {
+            X509Certificate2 publicKeyCertificate = new X509Certificate2(publicKeyFilePath);
+            
+            using (RSA rsa = (RSA)publicKeyCertificate.GetRSAPublicKey())
+            {
+                return rsa.VerifyData(data, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            }
+        }
+    }
+}
+
+
+
+
+This is RSA
