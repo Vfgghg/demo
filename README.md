@@ -1,136 +1,120 @@
-encption::----
 using System;
-using System.IO;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace RES_LEARN
-{
-    public static class Encryption
-    {
-        public static byte[] Encrypt(byte[] data, string publicKeyFilePath)
-        {
-            X509Certificate2 publicKeyCertificate = new X509Certificate2(publicKeyFilePath);
-            RSAParameters publicKeyParameters = ((RSA)publicKeyCertificate.GetRSAPublicKey()).ExportParameters(false);
-
-            using (RSA rsa = RSA.Create())
-            {
-                rsa.ImportParameters(publicKeyParameters);
-                return rsa.Encrypt(data, RSAEncryptionPadding.OaepSHA256);
-            }
-        }
-    }
-}
-
-
-
-
-decption:::----
-
-using System;
-using System.IO;
-using System.Security.Cryptography;
-using System.Text;
-
-namespace RES_LEARN
-{
-    public static class Decryption
-    {
-        public static string Decrypt(byte[] encryptedData, string privateKeyFilePath, string privateKeyPassword)
-        {
-            X509Certificate2 privateKeyCertificate = new X509Certificate2(privateKeyFilePath, privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-            RSAParameters privateKeyParameters = ((RSA)privateKeyCertificate.GetRSAPrivateKey()).ExportParameters(true);
-
-            using (RSA rsa = RSA.Create())
-            {
-                rsa.ImportParameters(privateKeyParameters);
-                byte[] decryptedData = rsa.Decrypt(encryptedData, RSAEncryptionPadding.OaepSHA256);
-                return Encoding.UTF8.GetString(decryptedData);
-            }
-        }
-    }
-}
-
-
-signature::----
-
-using System;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-
-namespace RES_LEARN
-{
-    public static class Signature
-    {
-        public static byte[] SignData(byte[] data, string privateKeyFilePath, string privateKeyPassword)
-        {
-            X509Certificate2 privateKeyCertificate = new X509Certificate2(privateKeyFilePath, privateKeyPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-
-            using (RSA rsa = (RSA)privateKeyCertificate.GetRSAPrivateKey())
-            {
-                return rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            }
-        }
-
-        public static bool VerifySignature(byte[] data, byte[] signature, string publicKeyFilePath)
-        {
-            X509Certificate2 publicKeyCertificate = new X509Certificate2(publicKeyFilePath);
-            
-            using (RSA rsa = (RSA)publicKeyCertificate.GetRSAPublicKey())
-            {
-                return rsa.VerifyData(data, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            }
-        }
-    }
-}
-
-***********************execute file
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
-        // Specify the paths to your public and private key files
-        string publicKeyFilePath = "path_to_public_key";
-        string privateKeyFilePath = "path_to_private_key";
-        string privateKeyPassword = "your_private_key_password"; // Only if private key is password protected
+        // 1. Create the request data
+        MainRequestDataField requestData = CreateRequestData();
 
-        // Sample data to encrypt
-        string dataToEncrypt = "Hello, world!";
-        byte[] dataBytes = Encoding.UTF8.GetBytes(dataToEncrypt);
+        // 2. Encrypt the request data
+        byte[] encryptedData = EncryptionHelper.EncryptData(requestData);
 
-        // Load the public key from file
-        using (RSA rsaEncryption = RSA.Create())
+        // 3. Sign the encrypted data
+        byte[] signature = SignatureHelper.SignData(encryptedData);
+
+        // 4. Send the encrypted data and signature to the API
+        HttpResponseMessage response = await ApiHelper.SendRequestToApi(encryptedData, signature);
+
+        // 5. Process the response from the API
+        await ResponseProcessor.ProcessResponse(response);
+    }
+
+    private static MainRequestDataField CreateRequestData()
+    {
+        return new MainRequestDataField
         {
-            // Read the public key from file
-            byte[] publicKeyBytes = File.ReadAllBytes(publicKeyFilePath);
-            rsaEncryption.ImportFromPem(publicKeyBytes, out _);
+            RequestedID = "123456",
+            SourceSystemName = SourceSystemNameEnum.System1,
+            APItoken = "your_api_token",
+            Purpose = PurposeEnum.Purpose1,
+            SessionKey = "session_key"
+        };
+    }
+}
 
-            // Encrypt the data using the public key
-            byte[] encryptedData = EncryptionHelper.EncryptData(dataBytes, rsaEncryption);
+public class MainRequestDataField
+{
+    public string RequestedID { get; set; }
+    public SourceSystemNameEnum SourceSystemName { get; set; }
+    public string APItoken { get; set; }
+    public PurposeEnum Purpose { get; set; }
+    public string SessionKey { get; set; }
+}
 
-            // Output the encrypted data
-            Console.WriteLine("Encrypted data: " + Convert.ToBase64String(encryptedData));
-        }
+public enum SourceSystemNameEnum
+{
+    System1,
+    System2,
+    System3
+}
 
-        // Load the private key from file
-        using (RSA rsaDecryption = RSA.Create())
+public enum PurposeEnum
+{
+    Purpose1,
+    Purpose2,
+    Purpose3
+}
+
+public static class EncryptionHelper
+{
+    public static byte[] EncryptData(MainRequestDataField requestData)
+    {
+        string serializedRequest = JsonSerializer.Serialize(requestData);
+        // Implement encryption logic here (e.g., using AES)
+        byte[] encryptedData = Encoding.UTF8.GetBytes(serializedRequest); // Placeholder
+        return encryptedData;
+    }
+}
+
+public static class SignatureHelper
+{
+    public static byte[] SignData(byte[] encryptedData)
+    {
+        // Implement signing logic here (e.g., using RSA)
+        using (RSA rsa = RSA.Create())
         {
-            // Read the private key from file
-            byte[] privateKeyBytes = File.ReadAllBytes(privateKeyFilePath);
-            rsaDecryption.ImportFromPem(privateKeyBytes, out _);
+            // Load private key from file or other source
+            // rsa.ImportParameters(privateKeyParameters);
 
-            // Decrypt the encrypted data using the private key
-            byte[] decryptedData = DecryptionHelper.DecryptData(encryptedData, rsaDecryption);
-
-            // Convert the decrypted bytes back to a string
-            string decryptedString = Encoding.UTF8.GetString(decryptedData);
-
-            // Output the decrypted data
-            Console.WriteLine("Decrypted data: " + decryptedString);
+            // Sign the encrypted data
+            return rsa.SignData(encryptedData, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         }
     }
 }
 
+public static class ApiHelper
+{
+    public static async Task<HttpResponseMessage> SendRequestToApi(byte[] encryptedData, byte[] signature)
+    {
+        // Implement API request logic to send encryptedData and signature
+        HttpClient client = new HttpClient();
+        HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "https://api.example.com");
+        request.Content = new ByteArrayContent(encryptedData);
+        request.Headers.Add("X-Signature", Convert.ToBase64String(signature));
+        HttpResponseMessage response = await client.SendAsync(request);
+        return response;
+    }
+}
 
-
-This is RSA
+public static class ResponseProcessor
+{
+    public static async Task ProcessResponse(HttpResponseMessage response)
+    {
+        // Implement response processing logic here
+        if (response.IsSuccessStatusCode)
+        {
+            byte[] responseData = await response.Content.ReadAsByteArrayAsync();
+            // Decrypt and process the response data
+        }
+        else
+        {
+            // Handle error response
+        }
+    }
+}
