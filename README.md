@@ -122,18 +122,17 @@ public static class ResponseProcessor
 imp part!!above
 
 ********************************************************************
-using System;
+
+    using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-
 using System.Text;
 
 namespace RES_LEARN
 {
     class Program
     {
-
         static void Main(string[] args)
         {
             // Specify the paths to your certificate files
@@ -142,26 +141,14 @@ namespace RES_LEARN
             string privateKeyCertificatePassword = "marwadi";
 
             // Load public key certificate
-            X509Certificate2 publicKeyCertificate = new X509Certificate2("H:\\Temporary\\Vaibhav.Soni\\Marwadi\\server\\public.cer");
+            X509Certificate2 publicKeyCertificate = new X509Certificate2(publicKeyCertificatePath);
 
             // Load private key certificate
-            X509Certificate2 privateKeyCertificate = new X509Certificate2("H:\\Temporary\\Vaibhav.Soni\\Marwadi\\server\\private.pfx", "test@123", X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            X509Certificate2 privateKeyCertificate = new X509Certificate2(privateKeyCertificatePath, privateKeyCertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
             // Extract RSA parameters from certificate
             RSAParameters publicKeyParameters = ((RSA)publicKeyCertificate.GetRSAPublicKey()).ExportParameters(false);
             RSAParameters privateKeyParameters = ((RSA)privateKeyCertificate.GetRSAPrivateKey()).ExportParameters(true);
-
-
-            string publicKeyString = GetKeyString(publicKeyParameters);
-            string privateKeyString = GetKeyString(privateKeyParameters);
-
-            Console.WriteLine("PUBLIC KEY: ");
-            Console.WriteLine(publicKeyString);
-            Console.WriteLine("-------------------------------------------");
-
-            Console.WriteLine("PRIVATE KEY: ");
-            Console.WriteLine(privateKeyString);
-            Console.WriteLine("-------------------------------------------");
 
             string textToEncrypt = GenerateTestString();
             Console.WriteLine("TEXT TO ENCRYPT: ");
@@ -169,17 +156,17 @@ namespace RES_LEARN
             Console.WriteLine("-------------------------------------------");
 
             // Sign the data before encryption
-            byte[] signature = SignData(Encoding.UTF8.GetBytes(textToEncrypt), privateKeyCertificate);
+            byte[] signature = Signature.SignData(Encoding.UTF8.GetBytes(textToEncrypt), privateKeyCertificate);
 
-            byte[] encryptedBytes = Encrypt(Encoding.UTF8.GetBytes(textToEncrypt), publicKeyParameters);
+            byte[] encryptedBytes = Encryption.Encrypt(Encoding.UTF8.GetBytes(textToEncrypt), publicKeyParameters);
             string encryptedText = Convert.ToBase64String(encryptedBytes);
             Console.WriteLine("ENCRYPTED TEXT: ");
             Console.WriteLine(encryptedText);
             Console.WriteLine("-------------------------------------------");
 
-            string decryptedText = Decrypt(Convert.FromBase64String(encryptedText), privateKeyParameters);
+            string decryptedText = Decryption.Decrypt(Convert.FromBase64String(encryptedText), privateKeyParameters);
             // Verify the signature after decryption
-            bool signatureValid = VerifySignature(Encoding.UTF8.GetBytes(decryptedText), signature, publicKeyCertificate);
+            bool signatureValid = Signature.VerifySignature(Encoding.UTF8.GetBytes(decryptedText), signature, publicKeyCertificate);
             Console.WriteLine("SIGNATURE VALIDITY: ");
             Console.WriteLine(signatureValid ? "Valid" : "Invalid");
             Console.WriteLine("-------------------------------------------");
@@ -189,33 +176,6 @@ namespace RES_LEARN
 
             Console.WriteLine("press any key to exit");
             Console.ReadKey();
-        }
-
-        public static string GetKeyString(RSAParameters publicKey)
-        {
-            var stringWriter = new StringWriter();
-            var xmlSerializer = new System.Xml.Serialization.XmlSerializer(typeof(RSAParameters));
-            xmlSerializer.Serialize(stringWriter, publicKey);
-            return stringWriter.ToString();
-        }
-
-        public static byte[] Encrypt(byte[] data, RSAParameters publicKeyParameters)
-        {
-            using (RSA rsa = RSA.Create())
-            {
-                rsa.ImportParameters(publicKeyParameters);
-                return rsa.Encrypt(data, RSAEncryptionPadding.OaepSHA256);
-            }
-        }
-
-        public static string Decrypt(byte[] encryptedData, RSAParameters privateKeyParameters)
-        {
-            using (RSA rsa = RSA.Create())
-            {
-                rsa.ImportParameters(privateKeyParameters);
-                byte[] decryptedData = rsa.Decrypt(encryptedData, RSAEncryptionPadding.OaepSHA256);
-                return Encoding.UTF8.GetString(decryptedData);
-            }
         }
 
         private static string GenerateTestString()
@@ -230,21 +190,5 @@ namespace RES_LEARN
 
             return sb.ToString();
         }
-        public static byte[] SignData(byte[] data, X509Certificate2 certificate)
-        {
-            using (RSA rsa = (RSA)certificate.GetRSAPrivateKey())
-            {
-                return rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            }
-        }
-
-        public static bool VerifySignature(byte[] data, byte[] signature, X509Certificate2 certificate)
-        {
-            using (RSA rsa = (RSA)certificate.GetRSAPublicKey())
-            {
-                return rsa.VerifyData(data, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            }
-        }
     }
 }
-
