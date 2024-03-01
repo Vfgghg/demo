@@ -84,6 +84,52 @@ namespace RES_LEARN
     }
 }
 
+***********************execute file
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        // Specify the paths to your public and private key files
+        string publicKeyFilePath = "path_to_public_key";
+        string privateKeyFilePath = "path_to_private_key";
+        string privateKeyPassword = "your_private_key_password"; // Only if private key is password protected
+
+        // Sample data to encrypt
+        string dataToEncrypt = "Hello, world!";
+        byte[] dataBytes = Encoding.UTF8.GetBytes(dataToEncrypt);
+
+        // Load the public key from file
+        using (RSA rsaEncryption = RSA.Create())
+        {
+            // Read the public key from file
+            byte[] publicKeyBytes = File.ReadAllBytes(publicKeyFilePath);
+            rsaEncryption.ImportFromPem(publicKeyBytes, out _);
+
+            // Encrypt the data using the public key
+            byte[] encryptedData = EncryptionHelper.EncryptData(dataBytes, rsaEncryption);
+
+            // Output the encrypted data
+            Console.WriteLine("Encrypted data: " + Convert.ToBase64String(encryptedData));
+        }
+
+        // Load the private key from file
+        using (RSA rsaDecryption = RSA.Create())
+        {
+            // Read the private key from file
+            byte[] privateKeyBytes = File.ReadAllBytes(privateKeyFilePath);
+            rsaDecryption.ImportFromPem(privateKeyBytes, out _);
+
+            // Decrypt the encrypted data using the private key
+            byte[] decryptedData = DecryptionHelper.DecryptData(encryptedData, rsaDecryption);
+
+            // Convert the decrypted bytes back to a string
+            string decryptedString = Encoding.UTF8.GetString(decryptedData);
+
+            // Output the decrypted data
+            Console.WriteLine("Decrypted data: " + decryptedString);
+        }
+    }
+}
 
 
 
