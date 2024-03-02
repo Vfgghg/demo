@@ -1,194 +1,39 @@
 using System;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
-using System.Text;
 
-public class Program
+public static class ApiRequestHelper
 {
-    public static async Task Main(string[] args)
+    public static async Task<HttpResponseMessage> SendEncryptedAndSignedRequestToApi(string data, RSAParameters publicKeyParameters, RSAParameters privateKeyParameters)
     {
-        // 1. Create the request data
-        MainRequestDataField requestData = CreateRequestData();
+        // Encrypt the data using EncryptionHelper
+        byte[] encryptedData = EncryptionHelper.EncryptData(data, publicKeyParameters);
 
-        // 2. Encrypt the request data
-        byte[] encryptedData = EncryptionHelper.EncryptData(requestData);
+        // Sign the encrypted data using SignatureHelper
+        byte[] signature = SignatureHelper.SignData(encryptedData, privateKeyParameters);
 
-        // 3. Sign the encrypted data
-        byte[] signature = SignatureHelper.SignData(encryptedData);
-
-        // 4. Send the encrypted data and signature to the API
-        HttpResponseMessage response = await ApiHelper.SendRequestToApi(encryptedData, signature);
-
-        // 5. Process the response from the API
-        await ResponseProcessor.ProcessResponse(response);
+        // Send the encrypted data and signature to the API
+        return await SendRequestToApi(encryptedData, signature);
     }
 
-    private static MainRequestDataField CreateRequestData()
+    private static async Task<HttpResponseMessage> SendRequestToApi(byte[] encryptedData, byte[] signature)
     {
-        return new MainRequestDataField
+        using (HttpClient client = new HttpClient())
         {
-            RequestedID = "123456",
-            SourceSystemName = SourceSystemNameEnum.System1,
-            APItoken = "your_api_token",
-            Purpose = PurposeEnum.Purpose1,
-            SessionKey = "session_key"
-        };
-    }
-}
+            // Configure the base URL of the API
+            client.BaseAddress = new Uri("https://api.example.com");
 
-public class MainRequestDataField
-{
-    public string RequestedID { get; set; }
-    public SourceSystemNameEnum SourceSystemName { get; set; }
-    public string APItoken { get; set; }
-    public PurposeEnum Purpose { get; set; }
-    public string SessionKey { get; set; }
-}
+            // Construct the request body
+            var requestData = new
+            {
+                EncryptedData = Convert.ToBase64String(encryptedData),
+                Signature = Convert.ToBase64String(signature)
+            };
 
-public enum SourceSystemNameEnum
-{
-    System1,
-    System2,
-    System3
-}
-
-public enum PurposeEnum
-{
-    Purpose1,
-    Purpose2,
-    Purpose3
-}
-
-public static class EncryptionHelper
-{
-    public static byte[] EncryptData(MainRequestDataField requestData)
-    {
-        string serializedRequest = JsonSerializer.Serialize(requestData);
-        // Implement encryption logic here (e.g., using AES)
-        byte[] encryptedData = Encoding.UTF8.GetBytes(serializedRequest); // Placeholder
-        return encryptedData;
-    }
-}
-
-public static class SignatureHelper
-{
-    public static byte[] SignData(byte[] encryptedData)
-    {
-        // Implement signing logic here (e.g., using RSA)
-        using (RSA rsa = RSA.Create())
-        {
-            // Load private key from file or other source
-            // rsa.ImportParameters(privateKeyParameters);
-
-            // Sign the encrypted data
-            return rsa.SignData(encryptedData, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
-    }
-}
-
-public static class ApiHelper
-{
-    public static async Task<HttpResponseMessage> SendRequestToApi(byte[] encryptedData, byte[] signature)
-    {
-        // Implement API request logic to send encryptedData and signature
-        HttpClient client = new HttpClient();
-        HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "https://api.example.com");
-        request.Content = new ByteArrayContent(encryptedData);
-        request.Headers.Add("X-Signature", Convert.ToBase64String(signature));
-        HttpResponseMessage response = await client.SendAsync(request);
-        return response;
-    }
-}
-
-public static class ResponseProcessor
-{
-    public static async Task ProcessResponse(HttpResponseMessage response)
-    {
-        // Implement response processing logic here
-        if (response.IsSuccessStatusCode)
-        {
-            byte[] responseData = await response.Content.ReadAsByteArrayAsync();
-            // Decrypt and process the response data
-        }
-        else
-        {
-            // Handle error response
-        }
-    }
-}
-
-imp part!!above
-
-********************************************************************
-
-    using System;
-using System.IO;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-
-namespace RES_LEARN
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            // Specify the paths to your certificate files
-            string publicKeyCertificatePath = "H:\\Temporary\\Vaibhav.Soni\\Marwadi\\server\\public.cer";
-            string privateKeyCertificatePath = "H:\\Temporary\\Vaibhav.Soni\\Marwadi\\server\\private.pfx";
-            string privateKeyCertificatePassword = "marwadi";
-
-            // Load public key certificate
-            X509Certificate2 publicKeyCertificate = new X509Certificate2(publicKeyCertificatePath);
-
-            // Load private key certificate
-            X509Certificate2 privateKeyCertificate = new X509Certificate2(privateKeyCertificatePath, privateKeyCertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-
-            // Extract RSA parameters from certificate
-            RSAParameters publicKeyParameters = ((RSA)publicKeyCertificate.GetRSAPublicKey()).ExportParameters(false);
-            RSAParameters privateKeyParameters = ((RSA)privateKeyCertificate.GetRSAPrivateKey()).ExportParameters(true);
-
-            string textToEncrypt = GenerateTestString();
-            Console.WriteLine("TEXT TO ENCRYPT: ");
-            Console.WriteLine(textToEncrypt);
-            Console.WriteLine("-------------------------------------------");
-
-            // Sign the data before encryption
-            byte[] signature = Signature.SignData(Encoding.UTF8.GetBytes(textToEncrypt), privateKeyCertificate);
-
-            byte[] encryptedBytes = Encryption.Encrypt(Encoding.UTF8.GetBytes(textToEncrypt), publicKeyParameters);
-            string encryptedText = Convert.ToBase64String(encryptedBytes);
-            Console.WriteLine("ENCRYPTED TEXT: ");
-            Console.WriteLine(encryptedText);
-            Console.WriteLine("-------------------------------------------");
-
-            string decryptedText = Decryption.Decrypt(Convert.FromBase64String(encryptedText), privateKeyParameters);
-            // Verify the signature after decryption
-            bool signatureValid = Signature.VerifySignature(Encoding.UTF8.GetBytes(decryptedText), signature, publicKeyCertificate);
-            Console.WriteLine("SIGNATURE VALIDITY: ");
-            Console.WriteLine(signatureValid ? "Valid" : "Invalid");
-            Console.WriteLine("-------------------------------------------");
-
-            Console.WriteLine("DECRYPTED TEXT: ");
-            Console.WriteLine(decryptedText);
-
-            Console.WriteLine("press any key to exit");
-            Console.ReadKey();
-        }
-
-        private static string GenerateTestString()
-        {
-            Guid opportunityId = Guid.NewGuid();
-            Guid systemUserId = Guid.NewGuid();
-            string currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            StringBuilder sb = new StringBuilder();
-            sb.AppendFormat("opportunityid={0}", opportunityId.ToString());
-            sb.AppendFormat("&systemuserid={0}", systemUserId.ToString());
-            sb.AppendFormat("&currenttime={0}", currentTime);
-
-            return sb.ToString();
+            // Send the POST request to the API endpoint
+            HttpResponseMessage response = await client.PostAsJsonAsync("/endpoint", requestData);
+            return response;
         }
     }
 }
