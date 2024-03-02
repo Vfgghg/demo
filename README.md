@@ -38,38 +38,10 @@ public static class ApiRequestHelper
     }
 }
 *******************
-using System;
-using System.IO;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
+byte[] key = GenerateKey();
+byte[] iv = GenerateIV();
 
-public static class EncryptionHelper
-{
-    public static byte[] EncryptData(object data, byte[] key, byte[] iv)
-    {
-        string serializedData = JsonSerializer.Serialize(data);
-        byte[] encryptedData;
-
-        using (Aes aesAlg = Aes.Create())
-        {
-            aesAlg.Key = key;
-            aesAlg.IV = iv;
-
-            ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
-
-            using (MemoryStream msEncrypt = new MemoryStream())
-            {
-                using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
-                {
-                    using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
-                    {
-                        swEncrypt.Write(serializedData);
-                    }
-                    encryptedData = msEncrypt.ToArray();
-                }
-            }
-        }
+byte[] encryptedRequestData = EncryptionHelper.EncryptData(requestData, key, iv);
 
         return encryptedData;
     }
