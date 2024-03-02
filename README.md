@@ -1,49 +1,73 @@
 using System;
-using System.Net.Http;
-using System.Threading.Tasks;
 using System.Security.Cryptography;
+using System.Text;
 
-public static class ApiRequestHelper
+public static class DecryptionHelper
 {
-    public static async Task<HttpResponseMessage> SendEncryptedAndSignedRequestToApi(string data, RSAParameters publicKeyParameters, RSAParameters privateKeyParameters)
+    public static string DecryptData(byte[] encryptedData, RSAParameters privateKeyParameters)
     {
-        // Encrypt the data using EncryptionHelper
-        byte[] encryptedData = EncryptionHelper.EncryptData(data, publicKeyParameters);
-
-        // Sign the encrypted data using SignatureHelper
-        byte[] signature = SignatureHelper.SignData(encryptedData, privateKeyParameters);
-
-        // Send the encrypted data and signature to the API
-        return await SendRequestToApi(encryptedData, signature);
-    }
-
-    private static async Task<HttpResponseMessage> SendRequestToApi(byte[] encryptedData, byte[] signature)
-    {
-        using (HttpClient client = new HttpClient())
+        using (RSA rsa = RSA.Create())
         {
-            // Configure the base URL of the API
-            client.BaseAddress = new Uri("https://api.example.com");
-
-            // Construct the request body
-            var requestData = new
-            {
-                EncryptedData = Convert.ToBase64String(encryptedData),
-                Signature = Convert.ToBase64String(signature)
-            };
-
-            // Send the POST request to the API endpoint
-            HttpResponseMessage response = await client.PostAsJsonAsync("/endpoint", requestData);
-            return response;
+            rsa.ImportParameters(privateKeyParameters);
+            byte[] decryptedData = rsa.Decrypt(encryptedData, RSAEncryptionPadding.OaepSHA256);
+            return Encoding.UTF8.GetString(decryptedData);
         }
     }
 }
-*******************
-byte[] key = GenerateKey();
-byte[] iv = GenerateIV();
 
-byte[] encryptedRequestData = EncryptionHelper.EncryptData(requestData, key, iv);
+********************************************
+using System;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
 
-        return encryptedData;
+public static class ApiResponseHelper
+{
+    public static async Task ProcessResponse(HttpResponseMessage response, RSAParameters publicKeyParameters, RSAParameters privateKeyParameters)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            // Read the response content
+            var responseData = await response.Content.ReadAsByteArrayAsync();
+
+            // Extract the encrypted data and signature from the response headers
+            string encryptedDataString = response.Headers.GetValues("EncryptedData").FirstOrDefault();
+            string signatureString = response.Headers.GetValues("Signature").FirstOrDefault();
+
+            if (string.IsNullOrEmpty(encryptedDataString) || string.IsNullOrEmpty(signatureString))
+            {
+                // Handle missing encrypted data or signature
+                Console.WriteLine("Error: EncryptedData or Signature header missing in the response.");
+                return;
+            }
+
+            // Convert the encrypted data and signature from Base64 strings to byte arrays
+            byte[] encryptedData = Convert.FromBase64String(encryptedDataString);
+            byte[] signature = Convert.FromBase64String(signatureString);
+
+            // Verify the signature
+            bool signatureValid = SignatureHelper.VerifySignature(encryptedData, signature, publicKeyParameters);
+
+            if (signatureValid)
+            {
+                // Decrypt the data if the signature is valid
+                string decryptedData = DecryptionHelper.DecryptData(encryptedData, privateKeyParameters);
+
+                // Process the decrypted data...
+                Console.WriteLine("Decrypted data:");
+                Console.WriteLine(decryptedData);
+            }
+            else
+            {
+                // Handle invalid signature
+                Console.WriteLine("Error: Invalid signature.");
+            }
+        }
+        else
+        {
+            // Handle non-success status code
+            Console.WriteLine($"Error: API request failed with status code {response.StatusCode}.");
+        }
     }
 }
-
