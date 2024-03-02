@@ -71,3 +71,6 @@ public static class ApiResponseHelper
         }
     }
 }
+*************************
+ string serializedData = JsonSerializer.Serialize(data);
+        byte[] encryptedData;
