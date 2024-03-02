@@ -37,3 +37,17 @@ public static class ApiRequestHelper
         }
     }
 }
+*******************
+private static MainRequestDataField CreateRequestData()
+{
+    // Assuming you have access to the MainRequestDataField, SourceSystemNameEnum, and PurposeEnum classes
+    MainRequestDataField requestData = new MainRequestDataField
+    {
+        RequestedID = "123456",
+        SourceSystemName = SourceSystemNameEnum.System1,
+        APItoken = "your_api_token",
+        Purpose = PurposeEnum.Purpose1,
+        SessionKey = "session_key"
+    };
+    return requestData;
+}
