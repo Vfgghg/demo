@@ -46,37 +46,32 @@ using System.Text.Json;
 
 public static class EncryptionHelper
 {
-    public static byte[] EncryptData(MainRequestDataField requestData, byte[] key, byte[] iv)
+    public static byte[] EncryptData(object data, byte[] key, byte[] iv)
     {
-        // Serialize the request data to JSON
-        string serializedRequest = JsonSerializer.Serialize(requestData);
+        string serializedData = JsonSerializer.Serialize(data);
+        byte[] encryptedData;
 
-        // Convert the serialized JSON string to a byte array
-        byte[] plaintextBytes = Encoding.UTF8.GetBytes(serializedRequest);
-
-        // Create AES encryption algorithm instance
         using (Aes aesAlg = Aes.Create())
         {
             aesAlg.Key = key;
             aesAlg.IV = iv;
 
-            // Create an encryptor to perform the stream transform
             ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
 
-            // Create a memory stream to store the encrypted data
             using (MemoryStream msEncrypt = new MemoryStream())
             {
-                // Create a CryptoStream to perform encryption
                 using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
                 {
-                    // Write the plaintext data to the CryptoStream
-                    csEncrypt.Write(plaintextBytes, 0, plaintextBytes.Length);
-                    csEncrypt.FlushFinalBlock();
-
-                    // Return the encrypted data as a byte array
-                    return msEncrypt.ToArray();
+                    using (StreamWriter swEncrypt = new StreamWriter(csEncrypt))
+                    {
+                        swEncrypt.Write(serializedData);
+                    }
+                    encryptedData = msEncrypt.ToArray();
                 }
             }
         }
+
+        return encryptedData;
     }
 }
+
