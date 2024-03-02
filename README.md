@@ -72,5 +72,13 @@ public static class ApiResponseHelper
     }
 }
 *************************
- string serializedData = JsonSerializer.Serialize(data);
-        byte[] encryptedData;
+   using (RSA rsa = RSA.Create())
+        {
+            rsa.ImportParameters(publicKey);
+
+            encryptedData = rsa.Encrypt(Encoding.UTF8.GetBytes(serializedData), RSAEncryptionPadding.OaepSHA256);
+        }
+
+        return encryptedData;
+    }
+}
