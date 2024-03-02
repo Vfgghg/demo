@@ -38,16 +38,45 @@ public static class ApiRequestHelper
     }
 }
 *******************
-private static MainRequestDataField CreateRequestData()
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+
+public static class EncryptionHelper
 {
-    // Assuming you have access to the MainRequestDataField, SourceSystemNameEnum, and PurposeEnum classes
-    MainRequestDataField requestData = new MainRequestDataField
+    public static byte[] EncryptData(MainRequestDataField requestData, byte[] key, byte[] iv)
     {
-        RequestedID = "123456",
-        SourceSystemName = SourceSystemNameEnum.System1,
-        APItoken = "your_api_token",
-        Purpose = PurposeEnum.Purpose1,
-        SessionKey = "session_key"
-    };
-    return requestData;
+        // Serialize the request data to JSON
+        string serializedRequest = JsonSerializer.Serialize(requestData);
+
+        // Convert the serialized JSON string to a byte array
+        byte[] plaintextBytes = Encoding.UTF8.GetBytes(serializedRequest);
+
+        // Create AES encryption algorithm instance
+        using (Aes aesAlg = Aes.Create())
+        {
+            aesAlg.Key = key;
+            aesAlg.IV = iv;
+
+            // Create an encryptor to perform the stream transform
+            ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+
+            // Create a memory stream to store the encrypted data
+            using (MemoryStream msEncrypt = new MemoryStream())
+            {
+                // Create a CryptoStream to perform encryption
+                using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                {
+                    // Write the plaintext data to the CryptoStream
+                    csEncrypt.Write(plaintextBytes, 0, plaintextBytes.Length);
+                    csEncrypt.FlushFinalBlock();
+
+                    // Return the encrypted data as a byte array
+                    return msEncrypt.ToArray();
+                }
+            }
+        }
+    }
 }
