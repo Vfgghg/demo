@@ -1,36 +1,44 @@
-using CustomerDataFields;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-
-namespace Helperclass
-{
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            // Create a new instance of it and initialize its properties
-            MainRequestDataField obj1 = new MainRequestDataField
-            {
-                RequestedID = "IND2550",
-                SourceSystemName = "FINACLE",
-                Purpose = "01",
-
-            };
-
-            // useage
-            Console.WriteLine($"RequestId: {obj1.RequestedID}");
-            Console.WriteLine($"SourceSystemName: {obj1.SourceSystemName}");
-            Console.WriteLine($"Purpose: {obj1.Purpose}");
-           
-        }
-    }
-
-}
-
+ekycOTPbased = "0",
+                    segment = "3",
+                    segmentStartDate = "11-Feb-2022",
+                    status = "Active",
+                    effectiveDate = "15-Nov-2022",
+                    minor = "0",
+                    maritalStatus = "M",
+                    occupationType = "SE",
+                    occupationTypeOther = "",
+                    natureOfBusinessOther = "Marketing Firm",
+                    companyIdentificationNumber = "",
+                    companyRegistrationNumber = "",
+                    companyRegistrationCountry = "",
+                    globalIntermediaryIdentificationNumber = "",
+                    kycAttestationType = "1",
+                    kycDateOfDeclaration = "11-Mar-2021",
+                    kycPlaceOfDeclaration = "Mumbai",
+                    kycVerificationDate = "11-Mar-2021",
+                    kycEmployeeName = "Aditi Jadhav",
+                    kycEmployeeDesignation = "Manager",
+                    kycVerificationBranch = "Mumbai",
+                    kycEmployeeCode = "6546514",
+                    listed = "",
+                    applicationRefNumber = "AJNPC45568",
+                    documentRefNumber = "DOCREF5722",
+                    regAMLRisk = "1",
+                    regAMLRiskLastRiskReviewDate = "21-Jan-2019",
+                    regAMLRiskNextRiskReviewDate = "21-Mar-2025",
+                    incomeRange = "2",
+                    exactIncome = 250000.5,
+                    incomeCurrency = "INR",
+                    incomeEffectiveDate = "11-Feb-2022",
+                    incomeDescription = "Total income of a month",
+                    incomeDocument = "TaxReturns,CashFlowStatement",
+                    exactNetworth = 1000000.0,
+                    networthCurrency = "INR",
+                    networthEffectiveDate = "11-Feb-2019",
+                    networthDescription = "Total networth income of a year",
+                    networthDocument = "NetworthCertificate, BalanceSheet",
+                    familyCode = "FMC18779",
+                    channel = "2",
 ===================
 using System;
 using System.Security.Cryptography;
