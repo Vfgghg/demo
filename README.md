@@ -1,20 +1,34 @@
+using CustomerDataFields;
 using System;
-using System.Security.Cryptography;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
-public class RSAEncryption
+
+namespace Helperclass
 {
-    public static string Decrypt(string data, RSAParameters privateKey)
+    public class Program
     {
-        byte[] encryptedBytes = Convert.FromBase64String(data);
-
-        using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+        public static void Main(string[] args)
         {
-            rsa.ImportParameters(privateKey);
-            byte[] decryptedBytes = rsa.Decrypt(encryptedBytes, true);
-            return Encoding.UTF8.GetString(decryptedBytes);
+            // Create a new instance of it and initialize its properties
+            MainRequestDataField obj1 = new MainRequestDataField
+            {
+                RequestedID = "IND2550",
+                SourceSystemName = "FINACLE",
+                Purpose = "01",
+
+            };
+
+            // useage
+            Console.WriteLine($"RequestId: {obj1.RequestedID}");
+            Console.WriteLine($"SourceSystemName: {obj1.SourceSystemName}");
+            Console.WriteLine($"Purpose: {obj1.Purpose}");
+           
         }
     }
+
 }
 
 ===================
